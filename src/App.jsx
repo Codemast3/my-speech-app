@@ -30,7 +30,7 @@ function App() {
       {/* Navbar */}
       <nav className="bg-blue-900 p-4 shadow-md">
         <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-          <h1 className="text-white text-2xl font-semibold">Speechify</h1>
+          <h1 className="text-white text-2xl font-semibold">Speechiit</h1>
           <button
             onClick={async () => {
               await supabase.auth.signOut()
