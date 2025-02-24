@@ -6,7 +6,7 @@ function Transcriptions({ user }) {
   useEffect(() => {
     const fetchTranscriptions = async () => {
       const res = await fetch(
-        `https://my-speech-app-2.onrender.com/transcriptions?userId=${user?.id}`
+        `${import.meta.env.VITE_API_URL}/transcriptions?userId=${user?.id}`
       )
       const data = await res.json()
       setTranscriptions(data)

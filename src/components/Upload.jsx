@@ -13,7 +13,7 @@ function Upload({ user }) {
 
     try {
       const response = await fetch(
-        'https://my-speech-app-2.onrender.com/transcription',
+        `${import.meta.env.VITE_API_URL}/transcription`,
         {
           method: 'POST',
           body: formData,
