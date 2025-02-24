@@ -6,7 +6,7 @@ function Transcriptions({ user }) {
   useEffect(() => {
     const fetchTranscriptions = async () => {
       const res = await fetch(
-        `http://localhost:5000/transcriptions?userId=${user?.id}`
+        `https://my-speech-app-2.onrender.com/transcriptions?userId=${user?.id}`
       )
       const data = await res.json()
       setTranscriptions(data)
