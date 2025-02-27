@@ -50,7 +50,7 @@ function App() {
             <Upload user={user} />
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <Transcriptions user={user} />
+            <Transcriptions userId={user.id} />
           </div>
         </div>
       </div>
