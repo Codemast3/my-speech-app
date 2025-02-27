@@ -14,8 +14,8 @@ const { createClient: createDeepgramClient } = require('@deepgram/sdk')
 const app = express()
 const upload = multer({ dest: 'uploads/' })
 
-// const dburl = process.env.DB_URL || 'mongodb://localhost:27017/speechdb'
-const dburl = 'mongodb://localhost:27017/speechdb'
+const dburl = process.env.DB_URL || 'mongodb://localhost:27017/speechdb'
+// const dburl = 'mongodb://localhost:27017/speechdb'
 
 // MongoDB Connection
 async function connectToMongoDB() {
