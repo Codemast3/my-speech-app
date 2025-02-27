@@ -29,6 +29,7 @@ const supabase = createSupabaseClient(
 
 // Deepgram API setup
 const deepgram = createDeepgramClient(process.env.DEEPGRAM_API_KEY)
+// const dburl = 'mongodb://localhost:27017/speechdb'
 const dburl = process.env.DB_URL || 'mongodb://localhost:27017/speechdb'
 // MongoDB setup
 // mongoose.connect(process.env.DB_URL, 'mongodb://localhost:27017/speechdb', {
@@ -60,6 +61,7 @@ const Task = mongoose.model('Task', taskSchema)
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use('/uploads', express.static('uploads'))
 
 const secret = process.env.SECRET || 'thisshouldbeabettersecret!'
 
@@ -85,109 +87,15 @@ app.post('/upload', upload.single('audio'), (req, res) => {
     .status(200)
     .json({ message: 'File uploaded successfully', file: req.file })
 })
-// await deepgram.listen.prerecorded.transcribeFile
-// **Transcribe Audio File using Deepgram**
-// app.post('/transcribe', upload.single('audio'), async (req, res) => {
-//   console.log('Received file:', req.file)
-//   console.log('Received userId:', req.body.userId)
-
-//   if (!req.file) {
-//     return res.status(400).json({ error: 'No file uploaded' })
-//   }
-//   if (!req.body.userId) {
-//     return res.status(400).json({ error: 'User ID is required' })
-//   }
-
-//   try {
-//     const audioBuffer = fs.readFileSync(req.file.path)
-
-//     // Correct method for transcribing an audio file using the v3 SDK
-//     const { response, error } =
-//       await deepgram.listen.prerecorded.transcribeFile(
-//         {
-//           buffer: audioBuffer,
-//           mimetype: req.file.mimetype,
-//         },
-//         {
-//           punctuate: true, // Optional: If you want punctuation added to the transcription
-//           language: 'en-US', // Optional: Specify the language
-//         }
-//       )
-
-//     if (error) {
-//       console.error('Deepgram error:', error)
-//       return res.status(500).json({ error: 'Failed to transcribe audio' })
-//     }
-
-//     // Log the full response to understand its structure
-//     console.log('Deepgram response:', response)
-
-//     if (
-//       response.results &&
-//       response.results.channels &&
-//       response.results.channels[0] &&
-//       response.results.channels[0].alternatives &&
-//       response.results.channels[0].alternatives[0]
-//     ) {
-//       const transcription =
-//         response.results.channels[0].alternatives[0].transcript
-
-//       // Save transcription to Supabase
-//       const { data, error: supabaseError } = await supabase
-//         .from('transcriptions')
-//         .insert([
-//           { audio_url: req.file.path, transcription, user_id: req.body.userId },
-//         ])
-
-//       if (supabaseError) {
-//         console.error('Supabase error:', supabaseError)
-//         return res.status(500).json({ error: 'Failed to save transcription' })
-//       }
-
-//       res.status(200).json({
-//         message: 'Transcription saved successfully',
-//         transcription,
-//       })
-//     } else {
-//       console.error('Transcription result not found in response')
-//       return res
-//         .status(500)
-//         .json({ error: 'Transcription not found in response' })
-//     }
-//   } catch (error) {
-//     console.error('Error during transcription:', error)
-//     res.status(500).json({ error: 'Failed to transcribe audio' })
-//   }
-// })
-// app.post('/transcription', upload.single('audio'), async (req, res) => {
-//   const audioPath = req.file.path
-//   console.log('Received audio file at:', audioPath) // Log the audio file path
-
-//   try {
-//     const transcription = await openai.audio.transcriptions.create({
-//       file: fs.createReadStream(audioPath),
-//       model: 'whisper-1',
-//     })
-
-//     console.log('Transcription:', transcription.text)
-//     res.json({ transcription: transcription.text })
-//   } catch (error) {
-//     console.error('Transcription error:', error.message)
-//     res
-//       .status(500)
-//       .json({ error: 'Failed to transcribe audio.', details: error.message })
-//   } finally {
-//     fs.unlinkSync(audioPath) // Clean up the uploaded file
-//   }
-// })
 
 app.post('/transcription', upload.single('audio'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file uploaded' })
   }
 
-  // Step 1: Upload the file to AssemblyAI
+  const userId = req.body.user_id // Assume frontend sends user_id
   const filePath = req.file.path
+
   let assemblyUploadUrl
   try {
     const fileStream = fs.createReadStream(filePath)
@@ -203,39 +111,31 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
     )
     assemblyUploadUrl = uploadResponse.data.upload_url
   } catch (error) {
-    console.error('Error uploading to AssemblyAI:', error.message)
     return res
       .status(500)
       .json({ error: 'Error uploading file to AssemblyAI.' })
   }
 
-  // Step 2: Request a transcription from AssemblyAI
   let transcriptId
   try {
     const transcriptResponse = await axios.post(
       'https://api.assemblyai.com/v2/transcript',
       { audio_url: assemblyUploadUrl },
-      {
-        headers: { authorization: process.env.ASSEMBLYAI_API_KEY },
-      }
+      { headers: { authorization: process.env.ASSEMBLYAI_API_KEY } }
     )
     transcriptId = transcriptResponse.data.id
   } catch (error) {
-    console.error('Error requesting transcription:', error.message)
     return res
       .status(500)
       .json({ error: 'Error starting transcription process.' })
   }
 
-  // Step 3: Poll for the transcription result
-  // (In a production app, you might use webhooks or a more sophisticated polling mechanism)
+  // Polling for transcription completion
   const getTranscription = async (transcriptId) => {
     try {
       const pollingResponse = await axios.get(
         `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
-        {
-          headers: { authorization: process.env.ASSEMBLYAI_API_KEY },
-        }
+        { headers: { authorization: process.env.ASSEMBLYAI_API_KEY } }
       )
       return pollingResponse.data
     } catch (error) {
@@ -243,7 +143,6 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
     }
   }
 
-  // Poll every 5 seconds until the transcription is completed
   let transcriptionResult
   try {
     while (true) {
@@ -252,92 +151,47 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
       if (transcriptionResult.status === 'error') {
         return res.status(500).json({ error: 'Transcription failed.' })
       }
-      // Wait 5 seconds
-      await new Promise((resolve) => setTimeout(resolve, 5000))
+      await new Promise((resolve) => setTimeout(resolve, 5000)) // Wait 5s
     }
   } catch (error) {
-    console.error('Error during polling:', error.message)
     return res
       .status(500)
       .json({ error: 'Error during transcription polling.' })
   } finally {
-    // Clean up the uploaded file
-    fs.unlinkSync(filePath)
+    fs.unlinkSync(filePath) // Delete uploaded file after processing
   }
 
-  // Return the transcription text
-  res.status(200).json({ transcription: transcriptionResult.text })
+  // **Save transcription & file URL in MongoDB**
+  const newTask = new Task({
+    audio_url: `/uploads/${req.file.filename}`, // Relative path
+    transcription: transcriptionResult.text,
+    user_id: userId,
+  })
+
+  await newTask.save()
+
+  res.status(200).json({
+    message: 'Transcription saved successfully',
+    transcription: transcriptionResult.text,
+  })
 })
 
-app.get('/transcriptions', async (req, res) => {
-  const userId = req.query.userId
+app.get('/user-transcriptions', async (req, res) => {
+  const userId = req.query.userId // Get user_id from request
 
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' })
   }
 
   try {
-    const { data, error } = await supabase
-      .from('transcriptions')
-      .select('*')
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Supabase error:', error)
-      return res.status(500).json({ error: 'Failed to fetch transcriptions' })
-    }
-
-    res.status(200).json(data)
+    const userTranscriptions = await Task.find({ user_id: userId }).sort({
+      createdAt: -1,
+    })
+    res.status(200).json(userTranscriptions)
   } catch (error) {
-    console.error('API error:', error)
     res.status(500).json({ error: 'Failed to fetch transcriptions' })
   }
 })
-
-// app.post('/transcribe', upload.single('audio'), async (req, res) => {
-//   console.log('Received file:', req.file)
-//   console.log('Received userId:', req.body.userId)
-
-//   if (!req.file) {
-//     return res.status(400).json({ error: 'No file uploaded' })
-//   }
-//   if (!req.body.userId) {
-//     return res.status(400).json({ error: 'User ID is required' })
-//   }
-
-//   try {
-//     const audioBuffer = fs.readFileSync(req.file.path)
-
-//     // Use the Deepgram transcription method
-//     const { results } = await deepgram.listen.preRecorded.transcribeFile(
-//       { buffer: audioBuffer, mimetype: req.file.mimetype },
-//       { punctuate: true, language: 'en-US' }
-//     )
-
-//     const transcription = results.results.channels[0].alternatives[0].transcript
-
-//     // Save transcription to Supabase
-//     const { data, error } = await supabase
-//       .from('transcriptions')
-//       .insert([
-//         { audio_url: req.file.path, transcription, user_id: req.body.userId },
-//       ])
-
-//     if (error) {
-//       console.error('Supabase error:', error)
-//       return res.status(500).json({ error: 'Failed to save transcription' })
-//     }
-
-//     res
-//       .status(200)
-//       .json({ message: 'Transcription saved successfully', transcription })
-//   } catch (error) {
-//     console.error('Error during transcription:', error)
-//     res.status(500).json({ error: 'Failed to transcribe audio' })
-//   }
-// })
-
-// **Fetch Transcriptions for a User**
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

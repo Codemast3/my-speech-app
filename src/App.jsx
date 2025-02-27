@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import Login from './components/Login'
 import Upload from './components/Upload'
-import Transcriptions from './components/Transcriptionns'
+import Transcriptions from './components/Transcriptions'
 
 function App() {
   const [user, setUser] = useState(null)
