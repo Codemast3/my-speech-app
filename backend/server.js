@@ -53,6 +53,7 @@ connectToMongoDB()
 const taskSchema = new mongoose.Schema({
   audio_url: String,
   transcription: String,
+
   user_id: String,
 })
 
