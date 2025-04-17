@@ -31,28 +31,30 @@ const Transcriptions = ({ userId }) => {
   return (
     <div>
       <h2>Your Transcriptions</h2>
-      {transcriptions.length > 0 ? (
-        <ul>
-          {transcriptions.map((item, index) => (
-            <li key={index}>
-              <p>
-                <strong>Transcription:</strong> {item.transcription}
-              </p>
-              <audio controls>
-                <source
-                  src={`${import.meta.env.VITE_API_URL}/uploads/${
-                    item.audio_url
-                  }`}
-                  type="audio/mp3"
-                />
-                Your browser does not support the audio tag.
-              </audio>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No transcriptions found.</p>
-      )}
+      <div className="max-h-125 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+        {transcriptions.length > 0 ? (
+          <ul className="space-y-4">
+            {transcriptions.map((item, index) => (
+              <li key={index} className="p-3 bg-white rounded-lg shadow">
+                <p className="text-sm font-medium text-gray-800">
+                  {item.transcription}
+                </p>
+                <audio controls className="mt-2 w-full">
+                  <source
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${
+                      item.audio_url
+                    }`}
+                    type="audio/mp3"
+                  />
+                  Your browser does not support the audio tag.
+                </audio>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-600">No transcriptions found.</p>
+        )}
+      </div>
     </div>
   )
 }
