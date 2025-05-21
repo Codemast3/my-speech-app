@@ -4,6 +4,8 @@ import Login from './components/Login'
 import Upload from './components/Upload'
 import Transcriptions from './components/Transcriptions'
 import Sidebar from './components/Sidebar'
+import Footer from './components/ui/Trade'
+import Documentation from './components/ui/Documentation'
 import {
   BrowserRouter as Router,
   Routes,
@@ -39,44 +41,39 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="bg-gray-100 min-h-screen flex">
-        {/* Sidebar remains static */}
-        <Sidebar />
+    <>
+      <Router>
+        <div className="min-h-screen bg-gray-900 flex">
+          {/* Sidebar remains static */}
+          <Sidebar />
 
-        <div className="bg-gray-100 flex-1 min-h-screen">
-          {/* Navbar */}
-          <nav className="bg-gray-900 p-4 shadow-md">
-            <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-              <h1 className="text-white text-2xl font-semibold">Speechiit</h1>
-              {/* <button
-                onClick={async () => {
-                  await supabase.auth.signOut()
-                  setUser(null)
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
-              >
-                Sign Out
-              </button> */}
+          <div className="flex-1 min-h-screen bg-gray-900">
+            {/* Navbar */}
+            <nav className="bg-gray-900 p-4 shadow-md fixed top-0 w-full z-30">
+              <div className="max-w-screen-xl mx-auto flex justify-between items-center">
+                <h1 className="text-white text-2xl font-semibold">Speechiit</h1>
+              </div>
+            </nav>
+
+            {/* Dynamic Routing Content */}
+            <div className="p-8">
+              <Routes>
+                <Route path="/" element={<Navigate to="/upload" />} />
+                <Route path="/upload" element={<Upload user={user} />} />
+                <Route
+                  path="/transcriptions"
+                  element={<Transcriptions userId={user.id} />}
+                />
+                <Route path="/home" element={<Home />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/documentation" element={<Documentation />} />
+              </Routes>
             </div>
-          </nav>
-
-          {/* Dynamic Routing Content */}
-          <div className="p-8">
-            <Routes>
-              <Route path="/" element={<Navigate to="/upload" />} />
-              <Route path="/upload" element={<Upload user={user} />} />
-              <Route
-                path="/transcriptions"
-                element={<Transcriptions userId={user.id} />}
-              />
-              <Route path="/home" element={<Home />} />
-              <Route path="/profile" element={<Profile />} />
-            </Routes>
           </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+      <Footer />
+    </>
   )
 }
 

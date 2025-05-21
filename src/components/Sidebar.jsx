@@ -59,6 +59,14 @@ export default function Sidebar() {
                 My Profile
               </Button>
             </Link>
+            <Link to="/Documentation" onClick={() => setOpen(false)}>
+              <Button
+                variant="ghost"
+                className="w-full text-left hover:bg-gray-800 transition duration-300"
+              >
+                About llm
+              </Button>
+            </Link>
           </nav>
         </SheetContent>
       </Sheet>

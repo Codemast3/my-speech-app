@@ -1,1 +1,65 @@
 @import 'tailwindcss';
+/* styles.css */
+@layer base {
+  html,
+  body,
+  #root {
+    @apply min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Animation for error messages */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom range input styling */
+input[type='range'] {
+  @apply w-full h-2 bg-gray-600 rounded-lg outline-none;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  @apply appearance-none w-5 h-5 bg-green-500 rounded-full cursor-pointer transition-all duration-200;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+  @apply bg-green-400 scale-110;
+}
+
+input[type='range']::-moz-range-thumb {
+  @apply w-5 h-5 bg-green-500 rounded-full cursor-pointer transition-all duration-200;
+}
+
+input[type='range']::-moz-range-thumb:hover {
+  @apply bg-green-400 scale-110;
+}
+
+/* Enhance focus states for accessibility */
+input[type='range']:focus {
+  @apply ring-2 ring-green-500 ring-offset-2 ring-offset-gray-900;
+}
+
+/* Sidebar responsive behavior */
+@media (max-width: 768px) {
+  .sidebar.open .sheet-content {
+    transform: translateX(0) !important;
+  }
+}
+
+/* Subtle hover effect for cards */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
+}

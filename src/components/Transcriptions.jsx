@@ -31,7 +31,7 @@ const Transcriptions = ({ userId }) => {
   return (
     <div>
       <h2>Your Transcriptions</h2>
-      <div className="max-h-125 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+      <div className="max-h-125 overflow-y-auto border rounded-lg p-3 bg-gray-50 mt-10">
         {transcriptions.length > 0 ? (
           <ul className="space-y-4">
             {transcriptions.map((item, index) => (
