@@ -44,7 +44,26 @@ const taskSchema = new mongoose.Schema({
 })
 const Task = mongoose.model('Task', taskSchema)
 
-app.use(cors())
+// Configure CORS to allow requests from the frontend origin
+app.use(
+  cors({
+    origin: 'https://speechiit.netlify.app', // Allow only this origin
+    methods: ['GET', 'POST', 'OPTIONS'], // Allow these HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
+    credentials: true, // Allow credentials (if needed)
+  })
+)
+
+// Add a middleware to log CORS headers for debugging
+app.use((req, res, next) => {
+  console.log('CORS Headers Set:', {
+    'Access-Control-Allow-Origin': res.get('Access-Control-Allow-Origin'),
+    'Access-Control-Allow-Methods': res.get('Access-Control-Allow-Methods'),
+    'Access-Control-Allow-Headers': res.get('Access-Control-Allow-Headers'),
+  })
+  next()
+})
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static('uploads'))
@@ -52,6 +71,7 @@ app.use('/uploads', express.static('uploads'))
 // Upload Audio File
 app.post('/upload', upload.single('audio'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  console.log('File uploaded:', req.file)
   res
     .status(200)
     .json({ message: 'File uploaded successfully', file: req.file })
@@ -65,6 +85,7 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
   const filePath = req.file.path
 
   try {
+    console.log('Starting transcription process for file:', filePath)
     const fileStream = fs.createReadStream(filePath)
     const uploadResponse = await axios.post(
       'https://api.assemblyai.com/v2/upload',
@@ -77,6 +98,7 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
       }
     )
     const assemblyUploadUrl = uploadResponse.data.upload_url
+    console.log('AssemblyAI Upload URL:', assemblyUploadUrl)
 
     const transcriptResponse = await axios.post(
       'https://api.assemblyai.com/v2/transcript',
@@ -95,25 +117,39 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
       }
     )
     const transcriptId = transcriptResponse.data.id
+    console.log('Transcript ID:', transcriptId)
 
     // Polling
     let transcriptionResult
     let retries = 20
+    console.log('Polling for transcription result...')
     while (retries--) {
       const pollingResponse = await axios.get(
         `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
         { headers: { authorization: process.env.ASSEMBLYAI_API_KEY } }
       )
       transcriptionResult = pollingResponse.data
+      console.log('Transcription Status:', transcriptionResult.status)
       if (transcriptionResult.status === 'completed') break
-      if (transcriptionResult.status === 'error')
+      if (transcriptionResult.status === 'error') {
+        console.error('AssemblyAI Error:', transcriptionResult.error)
         throw new Error('Transcription failed.')
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000))
     }
 
+    console.log('Transcription Completed:', {
+      textLength: transcriptionResult.text
+        ? transcriptionResult.text.length
+        : 0,
+    })
+
+    // Clean up the file
+    console.log('Cleaning up file:', filePath)
     fs.unlinkSync(filePath)
 
     // Save all Audio Intelligence results
+    console.log('Saving transcription to MongoDB...')
     const newTask = new Task({
       audio_url: `/uploads/${req.file.filename}`,
       transcription: transcriptionResult.text,
@@ -125,6 +161,7 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
       safety_labels: transcriptionResult.content_safety_labels || {},
     })
     await newTask.save()
+    console.log('Transcription saved to MongoDB:', newTask._id)
 
     res.status(200).json({
       message: 'Transcription and Intelligence saved successfully',
@@ -137,8 +174,14 @@ app.post('/transcription', upload.single('audio'), async (req, res) => {
         safety_labels: transcriptionResult.content_safety_labels,
       },
     })
+    console.log('Response sent to frontend successfully')
   } catch (error) {
-    console.error('❌ Transcription Error:', error)
+    console.error('❌ Transcription Error:', error.message || error)
+    // Clean up the file in case of error
+    if (fs.existsSync(filePath)) {
+      console.log('Cleaning up file on error:', filePath)
+      fs.unlinkSync(filePath)
+    }
     res.status(500).json({ error: 'Transcription process failed.' })
   }
 })
@@ -148,12 +191,14 @@ app.get('/user-transcriptions', async (req, res) => {
   const userId = req.query.userId
   if (!userId) return res.status(400).json({ error: 'User ID is required' })
   try {
+    console.log('Fetching transcriptions for user:', userId)
     const userTranscriptions = await Task.find({ user_id: userId }).sort({
       createdAt: -1,
     })
+    console.log('Transcriptions fetched:', userTranscriptions.length)
     res.status(200).json(userTranscriptions)
   } catch (error) {
-    console.error('❌ Fetching Transcriptions Error:', error)
+    console.error('❌ Fetching Transcriptions Error:', error.message)
     res.status(500).json({ error: 'Failed to fetch transcriptions' })
   }
 })
